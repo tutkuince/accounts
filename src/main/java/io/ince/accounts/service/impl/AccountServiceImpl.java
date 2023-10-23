@@ -16,6 +16,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
@@ -27,7 +28,7 @@ public class AccountServiceImpl implements IAccountsService {
     private CustomerRepository customerRepository;
 
     /**
-     * @param customerDto
+     * @param customerDto - CustomerDto Object
      */
     @Override
     public void createAccount(CustomerDto customerDto) {
@@ -43,6 +44,10 @@ public class AccountServiceImpl implements IAccountsService {
         accountsRepository.save(createNewCustomer(savedCustomer));
     }
 
+    /**
+     * @param mobileNumber - mobile phone
+     * @return CustomerDto object
+     */
     @Override
     public CustomerDto fetchAccount(String mobileNumber) {
         Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
@@ -57,6 +62,32 @@ public class AccountServiceImpl implements IAccountsService {
         customerDto.setAccountsDto(AccountsMapper.mapToAccountsDto(account, new AccountsDto()));
 
         return customerDto;
+    }
+
+    /**
+     * @param customerDto - CustomerDto Object
+     * @return boolean indicating if the update of Account detail is successful or not
+     */
+    @Override
+    public boolean updateAccount(CustomerDto customerDto) {
+        boolean isUpdated = false;
+        AccountsDto accountsDto = customerDto.getAccountsDto();
+        if (!Objects.isNull(accountsDto)) {
+            Accounts account = accountsRepository.findById(accountsDto.getAccountNumber()).orElseThrow(
+                    () -> new ResourceNotFoundException("Account", "AccountNumber", accountsDto.getAccountNumber().toString())
+            );
+            AccountsMapper.mapToAccounts(accountsDto, account);
+            account = accountsRepository.save(account);
+
+            Long customerId = account.getCustomerId();
+            Customer customer = customerRepository.findById(customerId).orElseThrow(
+                    () -> new ResourceNotFoundException("Customer", "CustomerId", customerId.toString())
+            );
+            CustomerMapper.mapToCustomer(customerDto, customer);
+            customerRepository.save(customer);
+            isUpdated = true;
+        }
+        return isUpdated;
     }
 
     private Accounts createNewCustomer(Customer customer) {
