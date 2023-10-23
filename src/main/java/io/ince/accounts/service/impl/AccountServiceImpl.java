@@ -1,10 +1,13 @@
 package io.ince.accounts.service.impl;
 
 import io.ince.accounts.constants.AccountConstants;
+import io.ince.accounts.dto.AccountsDto;
 import io.ince.accounts.dto.CustomerDto;
 import io.ince.accounts.entity.Accounts;
 import io.ince.accounts.entity.Customer;
 import io.ince.accounts.exception.CustomerAlreadyExistsException;
+import io.ince.accounts.exception.ResourceNotFoundException;
+import io.ince.accounts.mapper.AccountsMapper;
 import io.ince.accounts.mapper.CustomerMapper;
 import io.ince.accounts.repository.AccountsRepository;
 import io.ince.accounts.repository.CustomerRepository;
@@ -38,6 +41,22 @@ public class AccountServiceImpl implements IAccountsService {
         customer.setCreatedBy("Anonymous");
         Customer savedCustomer = customerRepository.save(customer);
         accountsRepository.save(createNewCustomer(savedCustomer));
+    }
+
+    @Override
+    public CustomerDto fetchAccount(String mobileNumber) {
+        Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
+                () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
+        );
+
+        Accounts account = accountsRepository.findByCustomerId(customer.getCustomerId()).orElseThrow(
+                () -> new ResourceNotFoundException("Accounts", "customerId", customer.getCustomerId().toString())
+        );
+
+        CustomerDto customerDto = CustomerMapper.mapToCustomerDto(customer, new CustomerDto());
+        customerDto.setAccountsDto(AccountsMapper.mapToAccountsDto(account, new AccountsDto()));
+
+        return customerDto;
     }
 
     private Accounts createNewCustomer(Customer customer) {
